@@ -1,12 +1,23 @@
 """Notionデータ一括取込"""
 
 import os
-from notion_client import Client as NotionClient
+import requests
 from dotenv import load_dotenv
 import db
 import search
 
 load_dotenv()
+
+NOTION_API_BASE = "https://api.notion.com/v1"
+NOTION_VERSION = "2022-06-28"
+
+
+def _headers(token: str) -> dict:
+    return {
+        "Authorization": f"Bearer {token}",
+        "Notion-Version": NOTION_VERSION,
+        "Content-Type": "application/json",
+    }
 
 
 def _extract_text_from_block(block: dict) -> str:
@@ -26,30 +37,39 @@ def _extract_page_title(page: dict) -> str:
     return "無題"
 
 
-def fetch_pages_from_notion(
-    client: NotionClient, database_id: str
-) -> list[dict]:
+def fetch_pages_from_notion(token: str, database_id: str) -> list[dict]:
     """
     Notionデータベースのページを取得し、QAペア形式に変換する。
     ルール: ページタイトル→タイトル, 最初のテキストブロック→質問, 残り→回答（結合）
     """
     qa_list = []
     start_cursor = None
+    hdrs = _headers(token)
 
     while True:
-        kwargs = {"database_id": database_id, "page_size": 100}
+        body = {"page_size": 100}
         if start_cursor:
-            kwargs["start_cursor"] = start_cursor
+            body["start_cursor"] = start_cursor
 
-        response = client.databases.query(**kwargs)
+        resp = requests.post(
+            f"{NOTION_API_BASE}/databases/{database_id}/query",
+            headers=hdrs,
+            json=body,
+        )
+        resp.raise_for_status()
+        data = resp.json()
 
-        for page in response.get("results", []):
+        for page in data.get("results", []):
             page_id = page["id"]
             title = _extract_page_title(page)
 
             # ページ内のブロック（子要素）を取得
-            blocks_resp = client.blocks.children.list(block_id=page_id)
-            blocks = blocks_resp.get("results", [])
+            blocks_resp = requests.get(
+                f"{NOTION_API_BASE}/blocks/{page_id}/children?page_size=100",
+                headers=hdrs,
+            )
+            blocks_resp.raise_for_status()
+            blocks = blocks_resp.json().get("results", [])
 
             texts = [
                 _extract_text_from_block(b)
@@ -72,9 +92,9 @@ def fetch_pages_from_notion(
                 }
             )
 
-        if not response.get("has_more"):
+        if not data.get("has_more"):
             break
-        start_cursor = response.get("next_cursor")
+        start_cursor = data.get("next_cursor")
 
     return qa_list
 
@@ -89,8 +109,10 @@ def run_import() -> dict:
     if not token or not database_id:
         return {"error": "NOTION_API_KEY または NOTION_DATABASE_ID が未設定です。"}
 
-    client = NotionClient(auth=token)
-    qa_list = fetch_pages_from_notion(client, database_id)
+    try:
+        qa_list = fetch_pages_from_notion(token, database_id)
+    except Exception as e:
+        return {"error": f"Notion APIエラー: {e}"}
 
     upserted = 0
     for qa in qa_list:
