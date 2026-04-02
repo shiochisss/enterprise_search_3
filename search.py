@@ -34,8 +34,10 @@ def find_similar(question: str, top_k: int = 10) -> list[dict]:
     各要素: {id, title, question, answer, source, score}
     """
     embedding = get_embedding(question)
+    # pgvectorはベクトルを文字列形式で受け取る
+    embedding_str = str(embedding)
     result = db.get_client().rpc(
         "match_qa",
-        {"query_embedding": embedding, "match_count": top_k},
+        {"query_embedding": embedding_str, "match_count": top_k},
     ).execute()
     return result.data
