@@ -28,6 +28,12 @@ def get_embedding(text: str) -> list[float]:
     return response.data[0].embedding
 
 
+def get_qa_embedding(title: str, question: str, answer: str) -> list[float]:
+    """title + question + answer を結合してembedding化（検索精度向上）"""
+    combined = f"{title}\n{question}\n{answer}".strip()
+    return get_embedding(combined)
+
+
 def find_similar(question: str, top_k: int = 10) -> list[dict]:
     """
     クエリに類似するQAペアをpgvectorで検索し、類似度順に返す。

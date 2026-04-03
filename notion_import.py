@@ -116,7 +116,7 @@ def run_import() -> dict:
 
     upserted = 0
     for qa in qa_list:
-        embedding = search.get_embedding(qa["question"])
+        embedding = search.get_qa_embedding(qa["title"], qa["question"], qa["answer"])
         db.upsert_qa_by_source_id(
             source="notion",
             source_id=qa["source_id"],
