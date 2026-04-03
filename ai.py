@@ -47,6 +47,41 @@ def _build_messages(question: str, similar_qas: list[dict]) -> list[dict]:
     ]
 
 
+def clean_qa_text(title: str, question: str, answer: str) -> dict:
+    """
+    取込データのテキストをAIで整形する。
+    口語・略語・ノイズを除去し、検索しやすい明確な文章に変換。
+    返り値: {"title": str, "question": str, "answer": str}
+    """
+    prompt = (
+        "以下のQ&Aデータを、検索エンジンで見つけやすいように整形してください。\n"
+        "・口語表現を丁寧語に変換\n"
+        "・略語があれば正式名称を補足\n"
+        "・不要なノイズ（挨拶、絵文字、相槌など）を除去\n"
+        "・内容や意味は変えない\n"
+        "・以下のフォーマットで出力（各セクションの内容のみ、ラベル不要）\n\n"
+        "---タイトル---\n（簡潔なタイトル）\n"
+        "---質問---\n（整形された質問）\n"
+        "---回答---\n（整形された回答）\n\n"
+        f"元データ:\nタイトル: {title}\n質問: {question}\n回答: {answer}"
+    )
+    response = _get_client().chat.completions.create(
+        model=DEFAULT_MODEL,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    text = response.choices[0].message.content
+
+    parts = {"title": title, "question": question, "answer": answer}
+    try:
+        if "---タイトル---" in text and "---質問---" in text and "---回答---" in text:
+            parts["title"] = text.split("---タイトル---")[1].split("---質問---")[0].strip()
+            parts["question"] = text.split("---質問---")[1].split("---回答---")[0].strip()
+            parts["answer"] = text.split("---回答---")[1].strip()
+    except (IndexError, ValueError):
+        pass
+    return parts
+
+
 def generate_answer(
     question: str, similar_qas: list[dict], model: str = DEFAULT_MODEL
 ) -> str:
