@@ -64,7 +64,7 @@ with tab1:
         add_submitted = st.form_submit_button("追加")
 
     if add_submitted and new_question and new_answer:
-        embedding = search.get_embedding(new_question)
+        embedding = search.get_qa_embedding(new_title or new_question[:50], new_question, new_answer)
         db.insert_qa(
             title=new_title or new_question[:50],
             question=new_question,

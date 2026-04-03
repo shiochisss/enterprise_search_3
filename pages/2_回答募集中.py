@@ -34,7 +34,7 @@ else:
                     # 質問を解決済みにする
                     db.resolve_pending_question(q["id"], answer, user_name)
                     # 回答をQAペアとしてナレッジベースに登録
-                    embedding = search.get_embedding(q["question"])
+                    embedding = search.get_qa_embedding(q["question"][:50], q["question"], answer)
                     db.insert_qa(
                         title=q["question"][:50],
                         question=q["question"],
