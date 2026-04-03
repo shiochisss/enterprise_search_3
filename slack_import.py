@@ -5,6 +5,7 @@ from slack_sdk import WebClient
 from dotenv import load_dotenv
 import db
 import search
+import ai
 
 load_dotenv()
 
@@ -75,13 +76,14 @@ def run_import() -> dict:
 
     upserted = 0
     for qa in qa_list:
-        embedding = search.get_qa_embedding(qa["title"], qa["question"], qa["answer"])
+        cleaned = ai.clean_qa_text(qa["title"], qa["question"], qa["answer"])
+        embedding = search.get_qa_embedding(cleaned["title"], cleaned["question"], cleaned["answer"])
         db.upsert_qa_by_source_id(
             source="slack",
             source_id=qa["source_id"],
-            title=qa["title"],
-            question=qa["question"],
-            answer=qa["answer"],
+            title=cleaned["title"],
+            question=cleaned["question"],
+            answer=cleaned["answer"],
             embedding=embedding,
         )
         upserted += 1
