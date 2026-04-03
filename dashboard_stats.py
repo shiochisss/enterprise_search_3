@@ -29,8 +29,9 @@ def fetch_satisfaction_stats() -> list[dict]:
     questions = db.fetch_all_pending_questions()
     ratings: dict[str, list[int]] = defaultdict(list)
     for q in questions:
-        if q.get("resolved") and q.get("resolved_by") and q.get("satisfaction_rating"):
-            ratings[q["resolved_by"]].append(q["satisfaction_rating"])
+        rating = q.get("satisfaction_rating") or 0
+        if q.get("resolved") and q.get("resolved_by") and rating > 0:
+            ratings[q["resolved_by"]].append(rating)
 
     return [
         {
@@ -49,7 +50,7 @@ def fetch_search_cost_stats() -> dict:
     """
     history = db.fetch_search_history(limit=10000)
     total = len(history)
-    satisfied = sum(1 for h in history if h.get("satisfaction_rating", 0) >= 4)
+    satisfied = sum(1 for h in history if (h.get("satisfaction_rating") or 0) >= 4)
 
     return {
         "total_searches": total,
@@ -67,7 +68,7 @@ def fetch_question_cost_stats() -> dict:
     questions = db.fetch_all_pending_questions()
 
     total_searches = len(history)
-    ai_resolved = sum(1 for h in history if h.get("satisfaction_rating", 0) >= 4)
+    ai_resolved = sum(1 for h in history if (h.get("satisfaction_rating") or 0) >= 4)
     human_escalated = len(questions)
     human_resolved = sum(1 for q in questions if q.get("resolved"))
 
