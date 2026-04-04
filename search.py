@@ -21,9 +21,11 @@ def _get_openai_client() -> OpenAI:
 
 def get_embedding(text: str) -> list[float]:
     """テキストをembeddingベクトル（1536次元）に変換"""
+    # 8192トークン制限（text-embedding-3-small）回避のため、文字数で簡易制限
+    safe_text = (text[:10000]) if text else ""
     response = _get_openai_client().embeddings.create(
         model=EMBEDDING_MODEL,
-        input=text,
+        input=safe_text,
     )
     return response.data[0].embedding
 

@@ -53,6 +53,9 @@ def clean_qa_text(title: str, question: str, answer: str) -> dict:
     口語・略語・ノイズを除去し、検索しやすい明確な文章に変換。
     返り値: {"title": str, "question": str, "answer": str}
     """
+    # 文字数制限（トークン爆発防止のため8,000文字程度で制限）
+    safe_answer = answer[:8000] if answer else ""
+    
     prompt = (
         "以下のQ&Aデータを、検索エンジンで見つけやすいように整形してください。\n"
         "・口語表現を丁寧語に変換\n"
@@ -63,7 +66,7 @@ def clean_qa_text(title: str, question: str, answer: str) -> dict:
         "---タイトル---\n（簡潔なタイトル）\n"
         "---質問---\n（整形された質問）\n"
         "---回答---\n（整形された回答）\n\n"
-        f"元データ:\nタイトル: {title}\n質問: {question}\n回答: {answer}"
+        f"元データ:\nタイトル: {title}\n質問: {question}\n回答: {safe_answer}"
     )
     response = _get_client().chat.completions.create(
         model=DEFAULT_MODEL,
