@@ -47,15 +47,18 @@ if results is not None:
     if not results:
         st.warning("該当するデータが見つかりませんでした。")
     else:
-        # AI要約（上位3件を基に）
+        # AI要約（キャッシュ済みならそのまま表示、未生成なら生成）
         st.subheader("💡 AIによる回答")
-        top_3 = results[:3]
-        answer_placeholder = st.empty()
-        full_answer = ""
-        for chunk in ai.generate_answer_stream(query, top_3):
-            full_answer += chunk
-            answer_placeholder.markdown(full_answer)
-        st.session_state.ai_answer = full_answer
+        if st.session_state.get("ai_answer"):
+            st.markdown(st.session_state.ai_answer)
+        else:
+            top_3 = results[:3]
+            answer_placeholder = st.empty()
+            full_answer = ""
+            for chunk in ai.generate_answer_stream(query, top_3):
+                full_answer += chunk
+                answer_placeholder.markdown(full_answer)
+            st.session_state.ai_answer = full_answer
 
         # 検索結果一覧
         st.subheader("📋 検索結果")
